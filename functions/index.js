@@ -11,7 +11,7 @@ exports.newUser = functions.firestore.document('users/{userID}')
 exports.deleteUser = functions.firestore.document('users/{userID}')
 .onDelete(deleteUserModule.handler);
 
-exports.makePlans = functions.firestore.document('users/{userID}/requests/{requestID}')
+exports.makePlans = functions.firestore.document('users/{userID}/plans/{planID}')
 .onCreate(makePlansModule.handler);
 
 
