@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const functions = require('firebase-functions');
+const getFriendPlans = require('../utils/getFriendsPlans');
 
 admin.initializeApp(functions.config().firebase);
 
@@ -14,7 +15,6 @@ exports.handler = async (snap, context) => {
     const { userID } = context.params;
     const { startTime } = snap.data();
     const { endTime } = snap.data();
-    const { members } = snap.data().members;
     const planID = snap.id;
 
     const userPath = db.collection('users').doc(userID);
@@ -87,60 +87,5 @@ exports.handler = async (snap, context) => {
         }
     })
     log(`done`);
-}
-
-async function getFriendPlans(params) {
-    const friendID = params.friend.id;
-    const planRefs = await params.db.collection('users').doc(friendID).collection('plans').listDocuments();
-    const planDocs = await Promise.all(
-        planRefs.map(ref => {
-            return ref.get()
-        })
-    ); 
-    const plans = planDocs.map(doc => {
-        // stuff the friend and id attributes inside the plan data strucuture
-        const planData = doc.data();
-        const plan = {
-            id : doc.id,
-            startTime : planData.startTime,
-            endTime : planData.endTime,
-            friendIDs : [friendID],
-            members : planData.members
-        }
-        return plan;
-    })
-    
-    return plans.filter(plan => {
-        // checking time conformance
-        console.log(`params.endTime: ${params.endTime}`);
-        console.log(`plan.endTime: ${plan.endTime}`);
-        console.log(`params.startTime: ${params.startTime}`);
-        console.log(`plans.startTime: ${plan.startTime}`);
-        const oneHour = 7200;
-        if (Math.min(params.endTime, plan.endTime) - Math.max(params.startTime, plan.startTime) > oneHour) {
-            console.log('Should add plan');
-            return true;
-        }
-        return false;
-    })
-
-    // filter time conformance results for blocking conformance
-    // return await Promise.all(
-    //     timeConformancePlans.filter(async plan => {
-    //         plan.members.forEach(async member => {
-    //             // NEEDS SYNTAX CHECK
-    //             if (params.blocked.includes(member.id)) {
-    //                 return false;
-    //             } else {
-    //                 // let db = admin.firestore();
-    //                 const memberBlockList = await params.db.collection('users').user(member.id).collection('blocked').listDocuments();
-    //                 if (memberBlockList.includes(userID)) {
-    //                     return false
-    //                 }
-    //             }
-    //         })
-    //         return true;
-    //     })
-    // );
 }
 
