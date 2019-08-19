@@ -1,61 +1,31 @@
 const refsToDocs = require('./refsToDocs.js');
+const checkTimeConformance = require('./checkTimeConformance');
 
 module.exports = async params => {
     const friendID = params.friend.id;
     const planRefs = await params.db.collection('users').doc(friendID).collection('plans').listDocuments();
     const planDocs = await Promise.all(
         planRefs.map(async ref => {
-            const members = await ref.collection('members').listDocuments();
+            const memberDocs = await ref.collection('members').listDocuments();
+            const data = await Promise.all([ref.get(), refsToDocs(memberDocs)]);
             return {
-                planDoc: ref.get(),
-                members: members
+                id: data[0].id,
+                planDoc: data[0].data(),
+                members: data[1]
             };
         })
     ); 
-    const plans = planDocs.map(async doc => {
+    const plans = planDocs.map(doc => {
         // stuff the friend and id attributes inside the plan data strucuture
-        const planData = doc.planDoc.data();
-        const members = await refsToDocs(planDoc.members);
-        const plan = {
+        const planData = doc.planDoc;
+        return {
             id : doc.id,
             startTime : planData.startTime,
             endTime : planData.endTime,
             friendIDs : [friendID],
-            members : members
-        }
-        return plan;
-    })
-    
-    return plans.filter(plan => {
-        // checking time conformance
-        console.log(`params.endTime: ${params.endTime}`);
-        console.log(`plan.endTime: ${plan.endTime}`);
-        console.log(`params.startTime: ${params.startTime}`);
-        console.log(`plans.startTime: ${plan.startTime}`);
-        const oneHour = 7200;
-        if (Math.min(params.endTime, plan.endTime) - Math.max(params.startTime, plan.startTime) > oneHour) {
-            console.log('Should add plan');
-            return true;
-        }
-        return false;
+            members : doc.members
+        };
     })
 
-    // filter time conformance results for blocking conformance
-    // return await Promise.all(
-    //     timeConformancePlans.filter(async plan => {
-    //         plan.members.forEach(async member => {
-    //             // NEEDS SYNTAX CHECK
-    //             if (params.blocked.includes(member.id)) {
-    //                 return false;
-    //             } else {
-    //                 // let db = admin.firestore();
-    //                 const memberBlockList = await params.db.collection('users').user(member.id).collection('blocked').listDocuments();
-    //                 if (memberBlockList.includes(userID)) {
-    //                     return false
-    //                 }
-    //             }
-    //         })
-    //         return true;
-    //     })
-    // );
+    return checkTimeConformance({ plans, myStartTime: params.startTime, myEndTime: params.endTime });
 }

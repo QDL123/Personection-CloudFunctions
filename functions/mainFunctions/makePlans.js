@@ -6,7 +6,7 @@ admin.initializeApp(functions.config().firebase);
 
 exports.handler = async (snap, context) => {
     const { log } = console;
-    log(`version: 4.4`);
+    log(`version: 6.0`);
 
     // Data aggregation
 
@@ -23,13 +23,13 @@ exports.handler = async (snap, context) => {
 
 
     const relations = await Promise.all([blockedPromise, friendsPromise]);
-    // const blocked = relations[0];
     const friends = relations[1];
     const blocked = relations[0];
 
 
     // get all friend plan info
-    // friendsPlans is an array of plans objects that passed relation, time, and blocking conformance
+    // unflattenedFriendsPlans is an array of plans objects that passed relation, time, and blocking conformance
+    // it's unflattened because the plans are embedded in an array of friends
     const unflattenedFriendsPlans = await Promise.all(
         // Relation conformance
         friends.map(friend => {
@@ -37,20 +37,18 @@ exports.handler = async (snap, context) => {
             return getFriendPlans(params);
         })
     );
-    log(`unflattened length: ${unflattenedFriendsPlans.length}`);
+
     const friendsPlans = [];
     unflattenedFriendsPlans.forEach(friend => {
-        if (friend !== undefined) {
+        if (friend) {
             if (friend.length > 0) {
                 friend.forEach(plan => {
-                    log(`should add plan: ${plan.id}`);
                     friendsPlans.push(plan);
                 })
             }
         }
     }); 
 
-    log(`1: friendPlans.length: ${friendsPlans.length}`);
     // Consolidate recurrences
     for (let i = friendsPlans.length; i > 0; --i) {
         for (let j = i - 1; j > 0; --j) {
@@ -70,11 +68,9 @@ exports.handler = async (snap, context) => {
     }
 
     // Guaranteed merging
-    log(`Should merge current plan (${planID}) with `);
-    log(`2: riendsPlans length: ${friendsPlans.length}`);
     friendsPlans.forEach(plan => {
         if (plan.members.length < 3) {
-            log('SHOULD MERGE');
+            log(`SHOULD MERGE: ${plan.id} and ${planID}`);
             // const params = { db, planID, plan };
             // let largerPlan;
             // if (plan.members.length < members.length) {
@@ -82,8 +78,6 @@ exports.handler = async (snap, context) => {
             // } else {
             //     largerPlan = plan.id;
             // }
-
-            log(`${plan.id} `);
         }
     })
     log(`done`);
