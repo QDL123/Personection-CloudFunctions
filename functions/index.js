@@ -1,9 +1,9 @@
 const functions = require('firebase-functions');
 
 
-const newUserModule = require('./newUser');
-const deleteUserModule = require('./deleteUser');
-const makePlansModule = require('./makePlans');
+const newUserModule = require('./mainFunctions/newUser');
+const deleteUserModule = require('./mainFunctions/deleteUser');
+const makePlansModule = require('./mainFunctions/makePlans');
 
 exports.newUser = functions.firestore.document('users/{userID}')
 .onCreate(newUserModule.handler);
